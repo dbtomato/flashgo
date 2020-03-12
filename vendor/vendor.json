@@ -1,0 +1,67 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "wFLw18XvRl2NnXP3wReuyB4KXk4=",
+			"path": "github.com/pingcap/errors",
+			"revision": "95897b64e011c18f05b4daac8ff3098a6d80c57e",
+			"revisionTime": "2019-08-09T09:25:03Z"
+		},
+		{
+			"checksumSHA1": "Tutue3nEgM/87jitUcYv6ODwyNE=",
+			"path": "github.com/satori/go.uuid",
+			"revision": "b2ce2384e17bbe0c6d34077efa39dbab3e09123b",
+			"revisionTime": "2018-10-28T12:50:25Z"
+		},
+		{
+			"checksumSHA1": "7dIpbadJ3MgMup01pO/C/AARlBo=",
+			"path": "github.com/shopspring/decimal",
+			"revision": "02e2044944ccd91e819dcc75d7d17d30ff0a2eab",
+			"revisionTime": "2020-02-27T20:28:08Z"
+		},
+		{
+			"checksumSHA1": "0RU+/XH0aPU3jqh0BvHSG8jflAs=",
+			"path": "github.com/siddontang/go-log/log",
+			"revision": "1e957dd83bed18c84716181da7b80d4af48eaefe",
+			"revisionTime": "2019-02-21T02:24:29Z"
+		},
+		{
+			"checksumSHA1": "9lEuqb2hNUEsdhjmOOcXykFbZBc=",
+			"path": "github.com/siddontang/go-log/loggers",
+			"revision": "1e957dd83bed18c84716181da7b80d4af48eaefe",
+			"revisionTime": "2019-02-21T02:24:29Z"
+		},
+		{
+			"checksumSHA1": "LrCYxlFrOnockJaW5CNagRhXpgQ=",
+			"path": "github.com/siddontang/go-mysql/client",
+			"revision": "7a62847fcdb5f46399ad0bc58cccca4a0f7fbb0d",
+			"revisionTime": "2020-03-11T00:20:57Z"
+		},
+		{
+			"checksumSHA1": "wAuWBcQy8q/MgCg6qp7cKnsVHSc=",
+			"path": "github.com/siddontang/go-mysql/mysql",
+			"revision": "7a62847fcdb5f46399ad0bc58cccca4a0f7fbb0d",
+			"revisionTime": "2020-03-11T00:20:57Z"
+		},
+		{
+			"checksumSHA1": "bRJfm6WB634FkdhGqMi+vmSuXjk=",
+			"path": "github.com/siddontang/go-mysql/packet",
+			"revision": "7a62847fcdb5f46399ad0bc58cccca4a0f7fbb0d",
+			"revisionTime": "2020-03-11T00:20:57Z"
+		},
+		{
+			"checksumSHA1": "OpP5VGYgW2G+djt77kGcviDR10I=",
+			"path": "github.com/siddontang/go-mysql/replication",
+			"revision": "7a62847fcdb5f46399ad0bc58cccca4a0f7fbb0d",
+			"revisionTime": "2020-03-11T00:20:57Z"
+		},
+		{
+			"checksumSHA1": "hou29E6PZ7dEDFgXgM9P15cgHr4=",
+			"path": "github.com/siddontang/go/hack",
+			"revision": "bdc77568d726a8702315ec4eafda030b6abc4f43",
+			"revisionTime": "2018-06-04T09:05:27Z"
+		}
+	],
+	"rootPath": "github.com/dbtomato/flashgo"
+}
