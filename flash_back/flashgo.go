@@ -206,6 +206,7 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 		}
 
 	}
+
 	if flag == false {
 		return nil, errors.New("parameter error: start_file " + startFile + " not in mysql server")
 	}
