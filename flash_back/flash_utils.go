@@ -8,5 +8,4 @@ func is_valid_datetime(dateStr string) bool {
 		return false
 	}
 	return true
-
 }

@@ -67,6 +67,7 @@ type Args struct {
 	sqlType      string
 	tables       string
 	databases    string
+	serverId     string
 }
 
 type master_status struct {
@@ -77,7 +78,7 @@ type master_status struct {
 	Executed_Gtid_Set string
 }
 
-var binlog_array []string
+var binlogArray []string
 
 func NewDsn(user string, password string, host string, port string, charset string) (*Dsn, error) {
 	dsn := new(Dsn)
@@ -188,30 +189,35 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 			flag = true
 		}
 
-		file_num, err := strconv.Atoi(strings.Split(r["Log_name"], ".")[1])
+		fileNum, err := strconv.Atoi(strings.Split(r["Log_name"], ".")[1])
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		start_file_num, err := strconv.Atoi(strings.Split(startFile, ".")[1])
+		startFileNum, err := strconv.Atoi(strings.Split(startFile, ".")[1])
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		stop_file_num, err := strconv.Atoi(strings.Split(stopFile, ".")[1])
+		stopFileNum, err := strconv.Atoi(strings.Split(stopFile, ".")[1])
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		fmt.Println(start_file_num, file_num, stop_file_num)
-		if start_file_num <= file_num && file_num <= stop_file_num {
-			binlog_array = append(binlog_array, r["Log_name"])
+		//判断start file和stop file中间的数据
+		fmt.Println(startFileNum, fileNum, stopFileNum)
+		if startFileNum <= fileNum && fileNum <= stopFileNum {
+			binlogArray = append(binlogArray, r["Log_name"])
 		}
 
 	}
-
+	//如果start file stop file不存在数据库中，则报错
 	if flag == false {
 		return nil, errors.New("parameter error: start_file " + startFile + " not in mysql server")
 	}
-
-	fmt.Println(binlog_array)
+	fmt.Println(binlogArray)
+	var mysqlServerId string
+	row = db.QueryRow("SELECT @@server_id as server_id;")
+	row.Scan(&mysqlServerId)
+	args.serverId = mysqlServerId
+	fmt.Println("------------\n" + args.serverId + "\n-------------\n")
 
 	args.startFile = startFile
 	args.startPos = startPos
