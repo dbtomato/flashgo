@@ -144,7 +144,7 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 	}
 
 	//登陆数据库
-	fmt.Println("---------连接数据库")
+	fmt.Println("连接数据库---------")
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, errors.New("数据库连接失败")
@@ -156,6 +156,7 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 	ms := new(master_status)
 
 	row.Scan(&ms.masterFile, &ms.masterPos, &ms.Binlog_Do_DB, &ms.Binlog_Ignore_DB, &ms.Executed_Gtid_Set)
+	fmt.Print("获取最新的binlog文件和位置------")
 	fmt.Println(ms.masterFile, ms.masterPos)
 
 	//查询当前用户持有的binlog
@@ -202,7 +203,6 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 			fmt.Println(err.Error())
 		}
 		//判断start file和stop file中间的数据
-		fmt.Println(startFileNum, fileNum, stopFileNum)
 		if startFileNum <= fileNum && fileNum <= stopFileNum {
 			binlogArray = append(binlogArray, r["Log_name"])
 		}
@@ -212,12 +212,17 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 	if flag == false {
 		return nil, errors.New("parameter error: start_file " + startFile + " not in mysql server")
 	}
+	fmt.Print("binlog文件范围-----------------")
 	fmt.Println(binlogArray)
 	var mysqlServerId string
 	row = db.QueryRow("SELECT @@server_id as server_id;")
 	row.Scan(&mysqlServerId)
 	args.serverId = mysqlServerId
-	fmt.Println("------------\n" + args.serverId + "\n-------------\n")
+	fmt.Println("获取serverid------------" + args.serverId)
+	if args.serverId == "" {
+		return nil, errors.New("数据库server id获取失败")
+
+	}
 
 	args.startFile = startFile
 	args.startPos = startPos
@@ -255,7 +260,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf("%+v", mysql_args)
+	fmt.Printf("打印参数列表-------%+v", mysql_args)
 	fmt.Println()
 	fmt.Println(mysql_args.startTime.Format("2006-01-02 15:04:05"))
 	fmt.Println(mysql_args.stopTime.Format("2006-01-02 15:04:05"))
