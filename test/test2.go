@@ -1,12 +1,33 @@
 package main
 
-import "time"
-import "fmt"
-
-func main() {
-	stime2, err := time.Parse("2006-01-02 15:04:05", "1980-01-01 00:00:00")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(stime2)
-}
+//import (
+//	"database/sql"
+//	_ "github.com/go-sql-driver/mysql"
+//)
+//import "fmt"
+//
+//func main() {
+//	dsn:="percona1:ppercona1234@tcp(10.16.4.125:3306)/test1"
+//	db,err := sql.Open("mysql",dsn)
+//	if err !=nil{
+//
+//	}
+//	defer db.Close()
+//	//row := DB.QueryRow("SHOW MASTER STATUS")
+//	rows,err:= db.Query("select id ,`name` from t1")
+//	defer rows.Close()
+//
+//	if err !=nil{
+//		fmt.Println(err.Error())
+//	}
+//
+//	id1 := 0
+//	name1 := ""
+//
+//	for rows.Next() {
+//		rows.Scan(&id1, &name1)
+//		fmt.Println(id1, name1)
+//	}
+//
+//
+//}
