@@ -70,5 +70,5 @@ func concatSqlFromBinlogEvent(args Args) (sql string, error error) {
 	if args.flashBack && args.noPK {
 		return "", errors.New("only one of flashback or no_pk can be True")
 	}
-
+	return "", nil
 }
