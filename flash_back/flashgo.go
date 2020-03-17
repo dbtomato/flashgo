@@ -1,248 +1,156 @@
 package main
 
 import (
-	"database/sql"
-	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/siddontang/go-mysql/mysql"
+	"github.com/siddontang/go-mysql/replication"
+
+	"context"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"os"
+	"reflect"
 	"runtime"
-	"strconv"
-	"strings"
 	"time"
 )
 
 var Version = "0.0.1"
 
 var (
-	user     = kingpin.Flag("user", "MySQL Username to log in as").Short('u').Default("root").String()
-	host     = kingpin.Flag("host", "Host the MySQL database server located").Short('h').Default("127.0.0.1").String()
-	port     = kingpin.Flag("port", "MySQL port to use").Short('P').Default("3306").String()
-	password = kingpin.Flag("password", "MySQL Password to use").Short('p').Default("").String()
-	charset  = kingpin.Flag("charset", "mysql charset").Default("utf8").String()
-
+	user         = kingpin.Flag("user", "MySQL Username to log in as").Short('u').Default("root").String()
+	host         = kingpin.Flag("host", "Host the MySQL database server located").Short('h').Default("127.0.0.1").String()
+	port         = kingpin.Flag("port", "MySQL port to use").Short('P').Uint16()
+	password     = kingpin.Flag("password", "MySQL Password to use").Short('p').Default("").String()
+	charset      = kingpin.Flag("charset", "mysql charset").Default("utf8").String()
 	startFile    = kingpin.Flag("start-file", "start binlog file name").Default("").String()
-	startPos     = kingpin.Flag("start-pos", "start binlog position ").Uint32()
+	startPos     = kingpin.Flag("start-position", "start binlog position ").Uint32()
 	stopFile     = kingpin.Flag("stop-file", "end binlog file name").Default("").String()
-	stopPos      = kingpin.Flag("stop-pos", "end binlog position ").Uint32()
+	stopPos      = kingpin.Flag("stop-position", "end binlog position ").Uint32()
 	startTime    = kingpin.Flag("start-datetime", "Start time. format %%Y-%%m-%%d %%H:%%M:%%S").Default("").String()
 	stopTime     = kingpin.Flag("stop-datetime", "Stop Time. format %%Y-%%m-%%d %%H:%%M:%%S;").Default("").String()
-	noPK         = kingpin.Flag("no-primary-key", "Generate insert sql without primary key if exists").Short('K').Default("").String()
-	flashBack    = kingpin.Flag("flashback", "Flashback data to start_position of start_file").Short('B').Default("").String()
-	stopNever    = kingpin.Flag("stop-never", "Continuously parse binlog. default: stop at the latest event when you start.").Default("").String()
+	noPK         = kingpin.Flag("no-primary-key", "Generate insert sql without primary key if exists").Short('K').Bool()
+	flashBack    = kingpin.Flag("flashback", "Flashback data to start_position of start_file").Short('B').Bool()
+	stopNever    = kingpin.Flag("stop-never", "Continuously parse binlog. default: stop at the latest event when you start.").Bool()
 	backInterval = kingpin.Flag("back-interval", "Sleep time between chunks of 1000 rollback sql. set it to 0 if do not need sleep").Default("").String()
 	tables       = kingpin.Flag("tables", "tables you want to process").Short('t').Default("").String()
 	databases    = kingpin.Flag("databases", "dbs you want to process").Short('d').Default("").String()
-	onlyDML      = kingpin.Flag("only-dml", "only print dml, ignore ddl").Default("false").String()
-	sqlType      = kingpin.Flag("sql-type", "Sql type you want to process, support INSERT, UPDATE, DELETE").Default("").String()
+	onlyDML      = kingpin.Flag("only-dml", "only print dml, ignore ddl").Bool()
+	sqlType      = kingpin.Flag("sql-type", "Sql type you want to process, support INSERT, UPDATE, DELETE").Default("DELETE,UPDATE,INSERT").String()
 )
 
-//'host': args.host, 'port': args.port, 'user': args.user, 'passwd': args.password, 'charset': 'utf8'
-type Dsn struct {
-	user     string
-	password string
-	host     string
-	port     string
-	charset  string
-}
-
-func (d Dsn) String() string {
-	//return "user:" + d.user + "\npassword:" + d.password + "\nhost:" + d.host + "\nport:" + d.port + "\ncharset:" + d.charset
-	dsn := fmt.Sprintf("%s:%s@%s(%s:%s)/%s", d.user, d.password, "tcp", d.host, d.port, "mysql")
-	return dsn
-}
-
-type Args struct {
-	startFile    string
-	startPos     uint32
-	stopFile     string
-	stopPos      uint32
-	startTime    time.Time
-	stopTime     time.Time
-	noPK         string
-	flashBack    string
-	stop_never   string
-	backInterval string
-	onlyDml      string
-	sqlType      string
-	tables       string
-	databases    string
-	serverId     string
-}
-
-type master_status struct {
-	masterFile        string
-	masterPos         uint32
-	Binlog_Do_DB      string
-	Binlog_Ignore_DB  string
-	Executed_Gtid_Set string
-}
-
-var binlogArray []string
-
-func NewDsn(user string, password string, host string, port string, charset string) (*Dsn, error) {
-	dsn := new(Dsn)
-	dsn.user = user
-	dsn.host = host
-	dsn.port = port
-	dsn.password = password
-	dsn.charset = charset
-	return dsn, nil
-
-}
-
-func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, stopPos uint32, startTime string, stopTime string, noPK string, flashBack string, stopNever string, backInterval string, onlyDml string, sqlType string, tables string, databases string) (*Args, error) {
-	args := new(Args)
-	if startFile == "" {
-		return nil, errors.New("Lack of parameter: start_file")
+func process_binlog(dsn *Dsn, args *Args) {
+	cfg := replication.BinlogSyncerConfig{
+		ServerID: 10010,
+		Flavor:   "mysql",
+		Host:     dsn.host,
+		Port:     dsn.port,
+		User:     dsn.user,
+		Password: dsn.password,
 	}
-	if flashBack != "" && stopNever != "" {
-		return nil, errors.New("Only one of flashback or stop-never can be True")
-	}
-	if noPK != "" && stopNever != "" {
-		return nil, errors.New("Only one of flashback or no_pk can be True")
-	}
-	if (startTime != "" && (!is_valid_datetime(startTime))) || (stopTime != "" && (!is_valid_datetime(stopTime))) {
-		return nil, errors.New("Incorrect datetime argument")
-	}
-	if startPos == 0 {
-		startPos = 4
-	}
-
-	if stopFile == "" {
-		stopFile = startFile
-	}
-
-	if startTime != "" {
-		stime, err := time.Parse("2006-01-02 15:04:05", startTime)
-		if err != nil {
-			fmt.Println("start_time时间格式化报错")
-		}
-		args.startTime = stime
-	} else {
-		stime, err := time.Parse("2006-01-02 15:04:05", "1980-01-01 00:00:00")
-		if err != nil {
-			return nil, errors.New("start_time时间格式化报错")
-		}
-		args.startTime = stime
-
-	}
-
-	if stopTime != "" {
-		stime, err := time.Parse("2006-01-02 15:04:05", stopTime)
-		if err != nil {
-			fmt.Println("start_time时间格式化报错")
-		}
-		args.stopTime = stime
-	} else {
-		stime, err := time.Parse("2006-01-02 15:04:05", "2999-12-31 00:00:00")
-		if err != nil {
-			fmt.Println("start_time时间格式化报错")
-		}
-		args.stopTime = stime
-
-	}
-
-	//登陆数据库
-	fmt.Println("连接数据库---------")
-	db, err := sql.Open("mysql", dsn)
+	flagLastEvent := false
+	syncer := replication.NewBinlogSyncer(cfg)
+	pos := mysql.Position{args.startFile, args.startPos}
+	stream, _ := syncer.StartSync(pos)
+	eStartPos, lastPos := args.startPos, args.startPos
+	fmt.Println(eStartPos, lastPos)
+	//创建文件存储数据
+	fileNameHeader := fmt.Sprintf("%s.%d", dsn.host, dsn.port)
+	tmpFile, err := createUniqueFile(fileNameHeader)
+	fmt.Println("创建临时文件--------" + tmpFile)
 	if err != nil {
-		return nil, errors.New("数据库连接失败")
+		fmt.Print(err.Error())
 	}
-	defer db.Close()
-	//row := db.QueryRow("SHOW MASTER STATUS")
-	row := db.QueryRow("show master status")
-
-	ms := new(master_status)
-
-	row.Scan(&ms.masterFile, &ms.masterPos, &ms.Binlog_Do_DB, &ms.Binlog_Ignore_DB, &ms.Executed_Gtid_Set)
-	fmt.Print("获取最新的binlog文件和位置------")
-	fmt.Println(ms.masterFile, ms.masterPos)
-
-	//查询当前用户持有的binlog
-	rows, err := db.Query("show master logs")
-	defer rows.Close()
-	if err != nil {
-		return nil, errors.New("数据库连接失败")
-	}
-
-	columns, _ := rows.Columns()
-	values := make([]sql.RawBytes, len(columns))
-	scanArgs := make([]interface{}, len(values))
-	for i := range values {
-		//把sql.RawBytes类型的地址存进去了
-		scanArgs[i] = &values[i]
-	}
-	var result []map[string]string
-	for rows.Next() {
-		res := make(map[string]string)
-		rows.Scan(scanArgs...)
-		for i, col := range values {
-			res[columns[i]] = string(col)
-		}
-		result = append(result, res)
-	}
-	//判断用户输入binlog是否在show master logs里面
-	flag := false
-	for _, r := range result {
-		//将所有的binlog名称追加到binlog_array数组中
-		if r["Log_name"] == startFile {
-			flag = true
+	fmt.Println("args.stopNever--", args.stopNever)
+	fmt.Println(args.binlogArray)
+	//对数据进行循环处理
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		binlogEvent, err := stream.GetEvent(ctx)
+		fmt.Println("----------------------------------------------------------------------")
+		fmt.Println(binlogEvent.Header.EventType.String())
+		pos.Pos = binlogEvent.Header.LogPos
+		fmt.Println("pos.Pos--", pos.Pos)
+		typeEvent := reflect.TypeOf(binlogEvent.Event).Elem()
+		evenTime, err := time.Parse("2006-01-02 15:04:05", time.Unix(int64(binlogEvent.Header.Timestamp), 0).Format("2006-01-02 15:04:05"))
+		//每个binlog头部和末尾会有RotateEvent event，我们取头部的RotateEvent来作为标记开始一个新的文件
+		if evenTime.Before(args.startTime) {
+			rotateEvent, ok := binlogEvent.Event.(*replication.RotateEvent)
+			if ok {
+				pos.Name = string(rotateEvent.NextLogName)
+			}
 		}
 
-		fileNum, err := strconv.Atoi(strings.Split(r["Log_name"], ".")[1])
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		startFileNum, err := strconv.Atoi(strings.Split(startFile, ".")[1])
-		if err != nil {
-			fmt.Println(err.Error())
+		//确定当前的binlog file名称
+
+		//完成任务
+		if !(args.stopNever) {
+			//暂时没有加异常处理
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Println("event time is -----"+time.Unix(int64(binlogEvent.Header.Timestamp), 0).Format("2006-01-02 15:04:05"), "event binlog file is ------", pos.Name, "event binlog pos is ----- ", pos.Pos, binlogEvent.Header.LogPos)
+			if (pos.Name == args.stopFile && pos.Pos == args.stopPos && pos.Pos != 0) || (pos.Name == args.eofFile && pos.Pos == args.eofPos && pos.Pos != 0) {
+				fmt.Println(pos.Name, args.stopFile, pos.Pos, args.stopPos)
+				fmt.Println(pos.Name, args.eofFile, pos.Pos, args.eofPos)
+				fmt.Println("最后一个event是", pos.Name, pos.Pos)
+				flagLastEvent = true
+			} else if evenTime.Before(args.startTime) {
+				fmt.Println("当前event时间小于starttime")
+				if !((typeEvent.Name() == "RotateEvent") || (typeEvent.Name() == "FormatDescriptionEvent")) {
+					lastPos = pos.Pos
+				}
+				//continue
+			} else if (!IsContain(args.binlogArray, pos.Name)) || ((args.stopPos != 0) && (pos.Name == args.stopFile) && (pos.Pos > args.stopPos)) || (pos.Name == args.eofFile && pos.Pos > args.eofPos) || (evenTime.After(args.stopTime)) {
+				fmt.Println("已经到达末尾，终止输出")
+				break
+			}
 		}
-		stopFileNum, err := strconv.Atoi(strings.Split(stopFile, ".")[1])
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		//判断start file和stop file中间的数据
-		if startFileNum <= fileNum && fileNum <= stopFileNum {
-			binlogArray = append(binlogArray, r["Log_name"])
+		fmt.Println("已经是新的if啦")
+
+		queryEvent, ok := binlogEvent.Event.(*replication.QueryEvent)
+		if ok && string(queryEvent.Query) == "BEGIN" {
+			eStartPos = lastPos
 		}
 
-	}
-	//如果start file stop file不存在数据库中，则报错
-	if flag == false {
-		return nil, errors.New("parameter error: start_file " + startFile + " not in mysql server")
-	}
-	fmt.Print("binlog文件范围-----------------")
-	fmt.Println(binlogArray)
-	var mysqlServerId string
-	row = db.QueryRow("SELECT @@server_id as server_id;")
-	row.Scan(&mysqlServerId)
-	args.serverId = mysqlServerId
-	fmt.Println("获取serverid------------" + args.serverId)
-	if args.serverId == "" {
-		return nil, errors.New("数据库server id获取失败")
+		queryEvent, ok = binlogEvent.Event.(*replication.QueryEvent)
+		if ok && !args.onlyDml {
+			sql := "输出begin commit 等语句"
+			fmt.Println("concat..." + sql)
+			if sql != "" {
+				fmt.Println(sql)
+			}
+		} else if IsDMLEvent(binlogEvent) && IsContain(args.sqlType, DMLEvenType(binlogEvent)) {
 
+			fmt.Println("打印特定的DML语句")
+		}
+
+		if !(typeEvent.Name() == "RotateEvent" || typeEvent.Name() == "FormatDescriptionEvent") {
+			lastPos = pos.Pos
+		}
+
+		if flagLastEvent {
+			break
+		}
+
+		cancel()
+		if err == context.DeadlineExceeded {
+			continue
+		}
+		binlogEvent.Dump(os.Stdout)
 	}
 
-	args.startFile = startFile
-	args.startPos = startPos
-	args.stopFile = stopFile
-	args.stopPos = stopPos
-	args.noPK = noPK
-	args.flashBack = flashBack
-	args.stop_never = stopNever
-	args.backInterval = backInterval
-	args.onlyDml = onlyDml
-	args.sqlType = sqlType
-	args.tables = tables
-	args.databases = databases
+	if args.flashBack {
+		fmt.Print("打印闪回sql语句")
+	}
 
-	return args, nil
+	fmt.Println("----------------------------------------------------------------------")
 
 }
 
 func main() {
-
 	kingpin.Version(fmt.Sprintf("flashgo %s (built with %s)\n", Version, runtime.Version()))
 	kingpin.Parse()
 	mysql_struct, _ := NewDsn(*user, *password, *host, *port, *charset)
@@ -264,5 +172,8 @@ func main() {
 	fmt.Println()
 	fmt.Println(mysql_args.startTime.Format("2006-01-02 15:04:05"))
 	fmt.Println(mysql_args.stopTime.Format("2006-01-02 15:04:05"))
+
+	//执行解析binlog
+	process_binlog(mysql_struct, mysql_args)
 
 }
