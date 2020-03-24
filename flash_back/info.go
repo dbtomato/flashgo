@@ -211,7 +211,6 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 	fmt.Println("获取serverid------------" + args.serverId)
 	if args.serverId == "" {
 		return nil, errors.New("数据库server id获取失败")
-
 	}
 
 	args.startFile = startFile

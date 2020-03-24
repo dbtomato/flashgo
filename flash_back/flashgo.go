@@ -1,12 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/siddontang/go-mysql/mysql"
 	"github.com/siddontang/go-mysql/replication"
-
-	"context"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"reflect"
@@ -38,7 +37,7 @@ var (
 	sqlType      = kingpin.Flag("sql-type", "Sql type you want to process, support INSERT, UPDATE, DELETE").Default("DELETE,UPDATE,INSERT").String()
 )
 
-func process_binlog(dsn *Dsn, args *Args) {
+func processBinlog(dsn *Dsn, args *Args) {
 	cfg := replication.BinlogSyncerConfig{
 		ServerID: 10010,
 		Flavor:   "mysql",
@@ -46,6 +45,10 @@ func process_binlog(dsn *Dsn, args *Args) {
 		Port:     dsn.port,
 		User:     dsn.user,
 		Password: dsn.password,
+	}
+	db, err := GetDBConnect(dsn.String())
+	if err != nil {
+		fmt.Print(err.Error())
 	}
 	flagLastEvent := false
 	syncer := replication.NewBinlogSyncer(cfg)
@@ -63,6 +66,7 @@ func process_binlog(dsn *Dsn, args *Args) {
 	fmt.Println("args.stopNever--", args.stopNever)
 	fmt.Println(args.binlogArray)
 	//对数据进行循环处理
+	colsMap := make(map[string][]string)
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		binlogEvent, err := stream.GetEvent(ctx)
@@ -123,6 +127,64 @@ func process_binlog(dsn *Dsn, args *Args) {
 				fmt.Println(sql)
 			}
 		} else if IsDMLEvent(binlogEvent) && IsContain(args.sqlType, DMLEvenType(binlogEvent)) {
+			event, ok := binlogEvent.Event.(*replication.RowsEvent)
+			if !ok {
+				fmt.Println("It's not ok for type RowsEvent")
+				return
+			}
+			tableName := string(event.Table.Table)
+			schemaName := string(event.Table.Schema)
+			tableIdString := fmt.Sprintf("%v", event.TableID)
+			tableNameKey := tableIdString + "." + schemaName + "." + tableName
+			tableNamePrimaryKey := tableIdString + "." + schemaName + "." + tableName + ".primary"
+			if colsMap[tableNameKey] == nil {
+				fmt.Println("表ID不存在于colsMap，进入数据库查询")
+				colsMap = GetColsInfo(db, tableIdString, schemaName, tableName, colsMap)
+			}
+			//fmt.Print("获取表字段名称为----")
+			//fmt.Println(colsMap)
+			//fmt.Println("rows event的库名和表名字是-----",tableName,schemaName)
+			colsNames := colsMap[tableNameKey]
+			colsNamesPrimary := colsMap[tableNamePrimaryKey]
+			count := 0
+
+			if binlogEvent.Header.EventType.String() == "UpdateRowsEventV2" {
+				fmt.Println("打印UpdateRowsEventV2---拼接SQL")
+				var updateBeforeValue []interface{}
+				var updateAfterValue []interface{}
+				for _, row := range event.Rows {
+					if count%2 == 0 {
+						updateBeforeValue = row
+					} else {
+						updateAfterValue = row
+						sql, err := concatUpdateSqlFromBinlogEvent(args, db, binlogEvent, updateBeforeValue, updateAfterValue, args.noPK, args.flashBack, eStartPos, colsNames, colsNamesPrimary)
+						//fmt.Println(sql)
+						if err != nil {
+							fmt.Println(err.Error())
+						}
+						if args.flashBack {
+							fmt.Println(sql)
+						} else {
+							fmt.Println(sql)
+						}
+					}
+					count++
+				}
+
+			} else {
+				for _, row := range event.Rows {
+					sql, err := concatSqlFromBinlogEvent(args, db, binlogEvent, row, args.noPK, args.flashBack, eStartPos, colsNames, colsNamesPrimary)
+					//fmt.Println(sql)
+					if err != nil {
+						fmt.Println(err.Error())
+					}
+					if args.flashBack {
+						fmt.Println(sql)
+					} else {
+						fmt.Println(sql)
+					}
+				}
+			}
 
 			fmt.Println("打印特定的DML语句")
 		}
@@ -153,27 +215,27 @@ func process_binlog(dsn *Dsn, args *Args) {
 func main() {
 	kingpin.Version(fmt.Sprintf("flashgo %s (built with %s)\n", Version, runtime.Version()))
 	kingpin.Parse()
-	mysql_struct, _ := NewDsn(*user, *password, *host, *port, *charset)
-	dsn_string := mysql_struct.String()
+	mysqlStruct, _ := NewDsn(*user, *password, *host, *port, *charset)
+	dsn_string := mysqlStruct.String()
 	fmt.Println(dsn_string)
-	fmt.Printf("%+v", mysql_struct)
+	fmt.Printf("%+v", mysqlStruct)
 	fmt.Println()
-	mysql_args, err := NewArgs(dsn_string, *startFile, *startPos, *stopFile, *stopPos, *startTime, *stopTime, *noPK, *flashBack, *stopNever, *backInterval, *onlyDML, *sqlType, *tables, *databases)
+	mysqlArgs, err := NewArgs(dsn_string, *startFile, *startPos, *stopFile, *stopPos, *startTime, *stopTime, *noPK, *flashBack, *stopNever, *backInterval, *onlyDML, *sqlType, *tables, *databases)
 
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	if mysql_args == nil {
+	if mysqlArgs == nil {
 		return
 	}
 
-	fmt.Printf("打印参数列表-------%+v", mysql_args)
-	fmt.Println()
-	fmt.Println(mysql_args.startTime.Format("2006-01-02 15:04:05"))
-	fmt.Println(mysql_args.stopTime.Format("2006-01-02 15:04:05"))
+	//fmt.Printf("打印参数列表-------%+v", mysqlArgs)
+	//fmt.Println()
+	//fmt.Println(mysqlArgs.startTime.Format("2006-01-02 15:04:05"))
+	//fmt.Println(mysqlArgs.stopTime.Format("2006-01-02 15:04:05"))
 
 	//执行解析binlog
-	process_binlog(mysql_struct, mysql_args)
+	processBinlog(mysqlStruct, mysqlArgs)
 
 }
