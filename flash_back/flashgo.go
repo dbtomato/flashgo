@@ -7,6 +7,7 @@ import (
 	"github.com/siddontang/go-mysql/mysql"
 	"github.com/siddontang/go-mysql/replication"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"io"
 	"os"
 	"reflect"
 	"runtime"
@@ -59,21 +60,26 @@ func processBinlog(dsn *Dsn, args *Args) {
 	//创建文件存储数据
 	fileNameHeader := fmt.Sprintf("%s.%d", dsn.host, dsn.port)
 	tmpFile, err := createUniqueFile(fileNameHeader)
+	file, err := os.Create(tmpFile)
+	defer file.Close()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	fmt.Println("创建临时文件--------" + tmpFile)
 	if err != nil {
 		fmt.Print(err.Error())
 	}
-	fmt.Println("args.stopNever--", args.stopNever)
-	fmt.Println(args.binlogArray)
+	//fmt.Println("args.stopNever--", args.stopNever)
+	//fmt.Println(args.binlogArray)
 	//对数据进行循环处理
 	colsMap := make(map[string][]string)
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		binlogEvent, err := stream.GetEvent(ctx)
-		fmt.Println("----------------------------------------------------------------------")
-		fmt.Println(binlogEvent.Header.EventType.String())
+		//fmt.Println("----------------------------------------------------------------------")
+		//fmt.Println(binlogEvent.Header.EventType.String())
 		pos.Pos = binlogEvent.Header.LogPos
-		fmt.Println("pos.Pos--", pos.Pos)
+		//fmt.Println("pos.Pos--", pos.Pos)
 		typeEvent := reflect.TypeOf(binlogEvent.Event).Elem()
 		evenTime, err := time.Parse("2006-01-02 15:04:05", time.Unix(int64(binlogEvent.Header.Timestamp), 0).Format("2006-01-02 15:04:05"))
 		//每个binlog头部和末尾会有RotateEvent event，我们取头部的RotateEvent来作为标记开始一个新的文件
@@ -95,7 +101,7 @@ func processBinlog(dsn *Dsn, args *Args) {
 			if err != nil {
 				fmt.Println(err.Error())
 			}
-			fmt.Println("event time is -----"+time.Unix(int64(binlogEvent.Header.Timestamp), 0).Format("2006-01-02 15:04:05"), "event binlog file is ------", pos.Name, "event binlog pos is ----- ", pos.Pos, binlogEvent.Header.LogPos)
+			//fmt.Println("event time is -----"+time.Unix(int64(binlogEvent.Header.Timestamp), 0).Format("2006-01-02 15:04:05"), "event binlog file is ------", pos.Name, "event binlog pos is ----- ", pos.Pos, binlogEvent.Header.LogPos)
 			if (pos.Name == args.stopFile && pos.Pos == args.stopPos && pos.Pos != 0) || (pos.Name == args.eofFile && pos.Pos == args.eofPos && pos.Pos != 0) {
 				fmt.Println(pos.Name, args.stopFile, pos.Pos, args.stopPos)
 				fmt.Println(pos.Name, args.eofFile, pos.Pos, args.eofPos)
@@ -112,7 +118,7 @@ func processBinlog(dsn *Dsn, args *Args) {
 				break
 			}
 		}
-		fmt.Println("已经是新的if啦")
+		//fmt.Println("已经是新的if啦")
 
 		queryEvent, ok := binlogEvent.Event.(*replication.QueryEvent)
 		if ok && string(queryEvent.Query) == "BEGIN" {
@@ -121,12 +127,21 @@ func processBinlog(dsn *Dsn, args *Args) {
 
 		queryEvent, ok = binlogEvent.Event.(*replication.QueryEvent)
 		if ok && !args.onlyDml {
-			sql := "输出begin commit 等语句"
-			fmt.Println("concat..." + sql)
+			//sql := "输出begin commit 等语句"
+			var row []interface{}
+			var colsNames []string
+			var colsNamesPrimary []string
+			sql, err := concatSqlFromBinlogEvent(args, db, binlogEvent, row, args.noPK, args.flashBack, eStartPos, colsNames, colsNamesPrimary)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			//fmt.Println("concat......" + sql)
 			if sql != "" {
-				fmt.Println(sql)
+				//fmt.Println(sql)
+				file.WriteString(sql + "\n")
 			}
 		} else if IsDMLEvent(binlogEvent) && IsContain(args.sqlType, DMLEvenType(binlogEvent)) {
+
 			event, ok := binlogEvent.Event.(*replication.RowsEvent)
 			if !ok {
 				fmt.Println("It's not ok for type RowsEvent")
@@ -138,7 +153,7 @@ func processBinlog(dsn *Dsn, args *Args) {
 			tableNameKey := tableIdString + "." + schemaName + "." + tableName
 			tableNamePrimaryKey := tableIdString + "." + schemaName + "." + tableName + ".primary"
 			if colsMap[tableNameKey] == nil {
-				fmt.Println("表ID不存在于colsMap，进入数据库查询")
+				//fmt.Println("表ID不存在于colsMap，进入数据库查询")
 				colsMap = GetColsInfo(db, tableIdString, schemaName, tableName, colsMap)
 			}
 			//fmt.Print("获取表字段名称为----")
@@ -148,45 +163,53 @@ func processBinlog(dsn *Dsn, args *Args) {
 			colsNamesPrimary := colsMap[tableNamePrimaryKey]
 			count := 0
 
-			if binlogEvent.Header.EventType.String() == "UpdateRowsEventV2" {
-				fmt.Println("打印UpdateRowsEventV2---拼接SQL")
-				var updateBeforeValue []interface{}
-				var updateAfterValue []interface{}
-				for _, row := range event.Rows {
-					if count%2 == 0 {
-						updateBeforeValue = row
-					} else {
-						updateAfterValue = row
-						sql, err := concatUpdateSqlFromBinlogEvent(args, db, binlogEvent, updateBeforeValue, updateAfterValue, args.noPK, args.flashBack, eStartPos, colsNames, colsNamesPrimary)
+			if (args.databases != nil && args.tables != nil && IsContain(args.databases, schemaName) && IsContain(args.tables, tableName)) || (args.databases == nil && args.tables != nil && IsContain(args.tables, tableName)) || (args.databases != nil && args.tables == nil && IsContain(args.databases, schemaName)) || (args.databases == nil && args.tables == nil) {
+
+				if binlogEvent.Header.EventType.String() == "UpdateRowsEventV2" {
+					var updateBeforeValue []interface{}
+					var updateAfterValue []interface{}
+					for _, row := range event.Rows {
+						if count%2 == 0 {
+							updateBeforeValue = row
+						} else {
+							updateAfterValue = row
+							sql, err := concatUpdateSqlFromBinlogEvent(args, db, binlogEvent, updateBeforeValue, updateAfterValue, args.noPK, args.flashBack, eStartPos, colsNames, colsNamesPrimary)
+							//fmt.Println(sql)
+							if err != nil {
+								fmt.Println(err.Error())
+							}
+							if args.flashBack {
+								//fmt.Println(sql)
+								file.WriteString(sql + "\n")
+							} else {
+								//fmt.Println(sql)
+								file.WriteString(sql + "\n")
+							}
+						}
+						count++
+					}
+
+				} else {
+					for _, row := range event.Rows {
+						sql, err := concatSqlFromBinlogEvent(args, db, binlogEvent, row, args.noPK, args.flashBack, eStartPos, colsNames, colsNamesPrimary)
 						//fmt.Println(sql)
 						if err != nil {
 							fmt.Println(err.Error())
 						}
 						if args.flashBack {
-							fmt.Println(sql)
+							file.WriteString(sql + "\n")
+							//fmt.Println(sql)
 						} else {
-							fmt.Println(sql)
+							//fmt.Println(sql)
+							file.WriteString(sql + "\n")
 						}
-					}
-					count++
-				}
-
-			} else {
-				for _, row := range event.Rows {
-					sql, err := concatSqlFromBinlogEvent(args, db, binlogEvent, row, args.noPK, args.flashBack, eStartPos, colsNames, colsNamesPrimary)
-					//fmt.Println(sql)
-					if err != nil {
-						fmt.Println(err.Error())
-					}
-					if args.flashBack {
-						fmt.Println(sql)
-					} else {
-						fmt.Println(sql)
 					}
 				}
 			}
-
-			fmt.Println("打印特定的DML语句")
+			//else{
+			//	fmt.Println("database or tables dont exist")}
+			//
+			////fmt.Println("打印特定的DML语句")
 		}
 
 		if !(typeEvent.Name() == "RotateEvent" || typeEvent.Name() == "FormatDescriptionEvent") {
@@ -201,15 +224,37 @@ func processBinlog(dsn *Dsn, args *Args) {
 		if err == context.DeadlineExceeded {
 			continue
 		}
-		binlogEvent.Dump(os.Stdout)
+
+		//binlogEvent.Dump(os.Stdout)
 	}
 
 	if args.flashBack {
-		fmt.Print("打印闪回sql语句")
+		//fmt.Print("打印闪回sql语句\n")
+		rd, err := NewReadLineFromEnd(tmpFile)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		defer rd.Close()
+		file, err := os.Create(tmpFile + ".bak")
+		defer file.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+
+		for {
+			data, err := rd.ReadLine()
+			file.WriteString(string(data))
+			if err != nil {
+				if err != io.EOF {
+				}
+				break
+			}
+			//fmt.Print(string(data))
+
+		}
+
+		//fmt.Println("----------------------------------------------------------------------")
 	}
-
-	fmt.Println("----------------------------------------------------------------------")
-
 }
 
 func main() {
@@ -217,9 +262,9 @@ func main() {
 	kingpin.Parse()
 	mysqlStruct, _ := NewDsn(*user, *password, *host, *port, *charset)
 	dsn_string := mysqlStruct.String()
-	fmt.Println(dsn_string)
-	fmt.Printf("%+v", mysqlStruct)
-	fmt.Println()
+	//fmt.Println(dsn_string)
+	//fmt.Printf("%+v", mysqlStruct)
+	//fmt.Println()
 	mysqlArgs, err := NewArgs(dsn_string, *startFile, *startPos, *stopFile, *stopPos, *startTime, *stopTime, *noPK, *flashBack, *stopNever, *backInterval, *onlyDML, *sqlType, *tables, *databases)
 
 	if err != nil {

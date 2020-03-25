@@ -38,8 +38,8 @@ type Args struct {
 	backInterval string
 	onlyDml      bool
 	sqlType      []string
-	tables       string
-	databases    string
+	tables       []string
+	databases    []string
 	serverId     string
 	eofFile      string
 	eofPos       uint32
@@ -127,6 +127,18 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 		args.sqlType = strings.Split(sqlType, ",")
 	} else {
 		fmt.Println("输入不能为空，请输入INSERT, UPDATE, DELETE")
+	}
+
+	if tables != "" {
+		args.tables = strings.Split(tables, ",")
+	} else {
+		args.tables = nil
+	}
+
+	if databases != "" {
+		args.databases = strings.Split(databases, ",")
+	} else {
+		args.databases = nil
 	}
 
 	//登陆数据库
@@ -221,8 +233,6 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 	args.stopNever = stopNever
 	args.backInterval = backInterval
 	args.onlyDml = onlyDml
-	args.tables = tables
-	args.databases = databases
 
 	return args, nil
 

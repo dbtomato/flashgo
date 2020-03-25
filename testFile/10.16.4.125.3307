@@ -1,0 +1,5 @@
+DELETE FROM test2.t1 WHERE `id` = 111 AND `name` = "马学韬" limit 1; # start 781 end 954 time 2020-03-25 16:57:08 +0000 UTC
+INSERT INTO `test2`.`t1`(`id`,`name`) VALUES (111,"马学韬"); # start 1050 end 1218 time 2020-03-25 16:59:56 +0000 UTC
+DELETE FROM test2.t1 WHERE `id` = 111 AND `name` = "马学韬" limit 1; # start 2058 end 2231 time 2020-03-25 17:03:13 +0000 UTC
+INSERT INTO `test2`.`t1`(`id`,`name`) VALUES (111,"马学韬"); # start 2327 end 2500 time 2020-03-25 17:03:13 +0000 UTC
+DELETE FROM test2.t1 WHERE `id` = 3 AND `name` = "吗吗吗" limit 1; # start 2596 end 2769 time 2020-03-25 17:05:47 +0000 UTC

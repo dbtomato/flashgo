@@ -90,8 +90,21 @@ func concatSqlFromBinlogEvent(args *Args, db *sql.DB, e *replication.BinlogEvent
 	if e.Header.EventType.String() == "DeleteRowsEventV2" || e.Header.EventType.String() == "WriteRowsEventV2" || e.Header.EventType.String() == "UpdateRowsEventV2" {
 		//fmt.Println(row)
 		sql_concat = generateSqlPattern(e, row, flashBack, *noPK, colsNames, colsNamesPrimary)
+		sql_time, _ := time.Parse("2006-01-02 15:04:05", time.Unix(int64(e.Header.Timestamp), 0).Format("2006-01-02 15:04:05"))
+		sql_concat = sql_concat + fmt.Sprintf(" # start %d end %d time %s", eStartPos, e.Header.LogPos, sql_time)
 		//fmt.Println("generateSqlPattern返回值"+sql_concat)
 		return sql_concat, nil
+
+	} else if args.flashBack == false && e.Header.EventType.String() == "QueryEvent" {
+		fmt.Println("---------------------------这是一个QueryEvent")
+		queryEvent, ok := e.Event.(*replication.QueryEvent)
+		if ok && string(queryEvent.Query) != "BEGIN" && string(queryEvent.Query) != "COMMIT" {
+			if queryEvent.Schema != nil || string(queryEvent.Schema) != "" {
+				sql_concat = fmt.Sprintf("USE %s;\n", queryEvent.Schema)
+			}
+			sql_concat := sql_concat + fmt.Sprintf("%s;", string(queryEvent.Query))
+			return sql_concat, nil
+		}
 	}
 	return "", nil
 }
@@ -128,11 +141,11 @@ func generateSqlPattern(e *replication.BinlogEvent, row []interface{}, flashBack
 			//fmt.Println(sql)
 			return sql
 		} else if e.Header.EventType.String() == "DeleteRowsEventV2" {
-			for i, col := range colsNames {
-				colsNames[i] = "`" + col + "`"
+			var colsNamesDian []string
+			for _, col := range colsNames {
+				colsNamesDian = append(colsNamesDian, "`"+col+"`")
 			}
-			tmpColNames := strings.Join(colsNames, ",")
-
+			tmpColNames := strings.Join(colsNamesDian, ",")
 			tmpColsValues := compareInsertItems(colsNames, row)
 			tmpColValuesInsert := strings.Join(tmpColsValues, ",")
 			sql := fmt.Sprintf("INSERT INTO `%s`.`%s`(%s) VALUES (%s);", event.Table.Schema, event.Table.Table, tmpColNames, tmpColValuesInsert)
@@ -141,6 +154,10 @@ func generateSqlPattern(e *replication.BinlogEvent, row []interface{}, flashBack
 		}
 	} else {
 		if e.Header.EventType.String() == "WriteRowsEventV2" {
+			var colsNamesDian []string
+			for _, col := range colsNames {
+				colsNamesDian = append(colsNamesDian, "`"+col+"`")
+			}
 			//if noPK{
 			//	if len(colsNamesPrimary)>0 || colsNamesPrimary !=nil{
 			//		var noPkcolsNamesArray []string
@@ -155,9 +172,11 @@ func generateSqlPattern(e *replication.BinlogEvent, row []interface{}, flashBack
 			//		colsNames=noPkcolsNamesArray
 			//	}
 			//}
-			tmpColNames := strings.Join(colsNames, ",")
+
+			tmpColNames := strings.Join(colsNamesDian, ",")
 			tmpColsValues := compareInsertItems(colsNames, row)
 			tmpColValuesInsert := strings.Join(tmpColsValues, ",")
+			fmt.Println(tmpColsValues)
 			sql := fmt.Sprintf("INSERT INTO `%s`.`%s`(%s) VALUES (%s);", event.Table.Schema, event.Table.Table, tmpColNames, tmpColValuesInsert)
 			//fmt.Println(sql)
 			return sql
@@ -313,7 +332,7 @@ func compareWhereUpdateItems(colsNames []string, row []interface{}) []string {
 			colsWheres = append(colsWheres, colsWhere)
 		} else {
 			if row[num] == "NULL" {
-				colsWhere := fmt.Sprintf("`%s` IS NULL ", col, row[num])
+				colsWhere := fmt.Sprintf("`%s` IS NULL ", col)
 				colsWheres = append(colsWheres, colsWhere)
 			} else {
 				colsWhere := fmt.Sprintf("`%s` =%#v", col, row[num])
