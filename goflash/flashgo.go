@@ -108,7 +108,7 @@ func processBinlog(dsn *Dsn, args *Args) {
 				fmt.Println("最后一个event是", pos.Name, pos.Pos)
 				flagLastEvent = true
 			} else if evenTime.Before(args.startTime) {
-				fmt.Println("当前event时间小于starttime")
+				//fmt.Println("当前event时间小于starttime")
 				if !((typeEvent.Name() == "RotateEvent") || (typeEvent.Name() == "FormatDescriptionEvent")) {
 					lastPos = pos.Pos
 				}
