@@ -96,7 +96,7 @@ func concatSqlFromBinlogEvent(args *Args, db *sql.DB, e *replication.BinlogEvent
 		return sql_concat, nil
 
 	} else if args.flashBack == false && e.Header.EventType.String() == "QueryEvent" {
-		fmt.Println("---------------------------这是一个QueryEvent")
+		//fmt.Println("---------------------------这是一个QueryEvent")
 		queryEvent, ok := e.Event.(*replication.QueryEvent)
 		if ok && string(queryEvent.Query) != "BEGIN" && string(queryEvent.Query) != "COMMIT" {
 			if queryEvent.Schema != nil || string(queryEvent.Schema) != "" {
