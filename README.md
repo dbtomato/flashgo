@@ -23,11 +23,11 @@ goflash是基于golang开发的MySQL binlog解析工具
 ## 使用命令
 正向解析binlog为SQL
 
-`./bin/goflash --user=root --password=pwd123 --port=3306 --host='10.16.26.87' --databases='test1' --tables='table_name' --sql-type="DELETE" --start-file="binlog.000826" --start-datetime="2020-04-01 13:00:00" --stop-datetime="2020-04-01 14:20:00"    > bin.log`
+`./bin/goflash --user=root --password=pwd123 --port=3306 --host='127.0.0.1' --databases='test1' --tables='table_name' --sql-type="DELETE" --start-file="binlog.000826" --start-datetime="2020-04-01 13:00:00" --stop-datetime="2020-04-01 14:20:00"    > bin.log`
 
 解析binlog为闪回SQL
 
-`./bin/goflash --user=root --password=pwd123 --port=3306 --host='10.16.26.87' --databases='test1' --tables='table_name' --sql-type="DELETE" --start-file="binlog.000826" --start-datetime="2020-04-01 13:00:00" --stop-datetime="2020-04-01 14:20:00"  -B  > bin.log`
+`./bin/goflash --user=root --password=pwd123 --port=3306 --host='127.0.0.1' --databases='test1' --tables='table_name' --sql-type="DELETE" --start-file="binlog.000826" --start-datetime="2020-04-01 13:00:00" --stop-datetime="2020-04-01 14:20:00"  -B  > bin.log`
 
 ## 导入数据
 goflash正向解析完成后的文件存放在当前目录下，以IP+PORT+ID命令文件
