@@ -4,17 +4,17 @@
 goflash是基于golang开发的MySQL binlog解析工具
 
 ## 工具功能
-1.正向解析binlog为SQL
-2.闪回binlog为SQL，对数据库操作进行回滚
-3.支持对binlog的库表进行过滤解析
-4.支持针对binlog file position进行过滤解析
-5.支持对DML类型进行过滤
+1. 正向解析binlog为SQL
+2. 闪回binlog为SQL，对数据库操作进行回滚
+3. 支持对binlog的库表进行过滤解析
+4. 支持针对binlog file position进行过滤解
+5. 支持对DML类型进行过滤
 
 ## 相对于binlog2sql的优势
-1.支持MySQL8.0
-2.速度更快3-5倍
-3.支持跨机器解析binlog为SQL
-4.对JSON格式的解析优化
+1. 支持MySQL8.0
+2. 速度更快3-5倍
+3. 支持跨机器解析binlog为SQL
+4. 对JSON格式的解析优化
 
 ## 如何使用
 在goflash的bin目录下，已经存放了针对linux x86-64的编译版本，如果需要其他版本，亦可以搭建go的编译环境进行编译，所有依赖包放在govendor的目录下
