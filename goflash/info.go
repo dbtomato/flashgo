@@ -26,24 +26,25 @@ func (d Dsn) String() string {
 }
 
 type Args struct {
-	startFile    string
-	startPos     uint32
-	stopFile     string
-	stopPos      uint32
-	startTime    time.Time
-	stopTime     time.Time
-	noPK         bool
-	flashBack    bool
-	stopNever    bool
-	backInterval string
-	onlyDml      bool
-	sqlType      []string
-	tables       []string
-	databases    []string
-	serverId     string
-	eofFile      string
-	eofPos       uint32
-	binlogArray  []string
+	startFile      string
+	startPos       uint32
+	stopFile       string
+	stopPos        uint32
+	startTime      time.Time
+	stopTime       time.Time
+	noPK           bool
+	flashBack      bool
+	stopNever      bool
+	backInterval   string
+	onlyDml        bool
+	sqlType        []string
+	tables         []string
+	databases      []string
+	serverId       string
+	eofFile        string
+	eofPos         uint32
+	binlogArray    []string
+	outputFileName string
 }
 
 type master_status struct {
@@ -68,7 +69,7 @@ func NewDsn(user string, password string, host string, port uint16, charset stri
 
 }
 
-func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, stopPos uint32, startTime string, stopTime string, noPK bool, flashBack bool, stopNever bool, backInterval string, onlyDml bool, sqlType string, tables string, databases string) (*Args, error) {
+func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, stopPos uint32, startTime string, stopTime string, noPK bool, flashBack bool, stopNever bool, backInterval string, onlyDml bool, sqlType string, tables string, databases string, outputFileName string) (*Args, error) {
 	args := new(Args)
 	if startFile == "" {
 		return nil, errors.New("Lack of parameter: start_file")
@@ -133,6 +134,12 @@ func NewArgs(dsn string, startFile string, startPos uint32, stopFile string, sto
 		args.tables = strings.Split(tables, ",")
 	} else {
 		args.tables = nil
+	}
+
+	if outputFileName != "" {
+		args.outputFileName = outputFileName
+	} else {
+		args.outputFileName = ""
 	}
 
 	if databases != "" {

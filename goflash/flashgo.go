@@ -17,25 +17,26 @@ import (
 var Version = "0.0.1"
 
 var (
-	user         = kingpin.Flag("user", "MySQL Username to log in as").Short('u').Default("root").String()
-	host         = kingpin.Flag("host", "Host the MySQL database server located").Short('h').Default("127.0.0.1").String()
-	port         = kingpin.Flag("port", "MySQL port to use").Short('P').Uint16()
-	password     = kingpin.Flag("password", "MySQL Password to use").Short('p').Default("").String()
-	charset      = kingpin.Flag("charset", "mysql charset").Default("utf8").String()
-	startFile    = kingpin.Flag("start-file", "start binlog file name").Default("").String()
-	startPos     = kingpin.Flag("start-position", "start binlog position ").Uint32()
-	stopFile     = kingpin.Flag("stop-file", "end binlog file name").Default("").String()
-	stopPos      = kingpin.Flag("stop-position", "end binlog position ").Uint32()
-	startTime    = kingpin.Flag("start-datetime", "Start time. format %%Y-%%m-%%d %%H:%%M:%%S").Default("").String()
-	stopTime     = kingpin.Flag("stop-datetime", "Stop Time. format %%Y-%%m-%%d %%H:%%M:%%S;").Default("").String()
-	noPK         = kingpin.Flag("no-primary-key", "Generate insert sql without primary key if exists").Short('K').Bool()
-	flashBack    = kingpin.Flag("flashback", "Flashback data to start_position of start_file").Short('B').Bool()
-	stopNever    = kingpin.Flag("stop-never", "Continuously parse binlog. default: stop at the latest event when you start.").Bool()
-	backInterval = kingpin.Flag("back-interval", "Sleep time between chunks of 1000 rollback sql. set it to 0 if do not need sleep").Default("").String()
-	tables       = kingpin.Flag("tables", "tables you want to process").Short('t').Default("").String()
-	databases    = kingpin.Flag("databases", "dbs you want to process").Short('d').Default("").String()
-	onlyDML      = kingpin.Flag("only-dml", "only print dml, ignore ddl").Bool()
-	sqlType      = kingpin.Flag("sql-type", "Sql type you want to process, support INSERT, UPDATE, DELETE").Default("DELETE,UPDATE,INSERT").String()
+	user           = kingpin.Flag("user", "MySQL Username to log in as").Short('u').Default("root").String()
+	host           = kingpin.Flag("host", "Host the MySQL database server located").Short('h').Default("127.0.0.1").String()
+	port           = kingpin.Flag("port", "MySQL port to use").Short('P').Uint16()
+	password       = kingpin.Flag("password", "MySQL Password to use").Short('p').Default("").String()
+	charset        = kingpin.Flag("charset", "mysql charset").Default("utf8").String()
+	startFile      = kingpin.Flag("start-file", "start binlog file name").Default("").String()
+	startPos       = kingpin.Flag("start-position", "start binlog position ").Uint32()
+	stopFile       = kingpin.Flag("stop-file", "end binlog file name").Default("").String()
+	stopPos        = kingpin.Flag("stop-position", "end binlog position ").Uint32()
+	startTime      = kingpin.Flag("start-datetime", "Start time. format %%Y-%%m-%%d %%H:%%M:%%S").Default("").String()
+	stopTime       = kingpin.Flag("stop-datetime", "Stop Time. format %%Y-%%m-%%d %%H:%%M:%%S;").Default("").String()
+	noPK           = kingpin.Flag("no-primary-key", "Generate insert sql without primary key if exists").Short('K').Bool()
+	flashBack      = kingpin.Flag("flashback", "Flashback data to start_position of start_file").Short('B').Bool()
+	stopNever      = kingpin.Flag("stop-never", "Continuously parse binlog. default: stop at the latest event when you start.").Bool()
+	backInterval   = kingpin.Flag("back-interval", "Sleep time between chunks of 1000 rollback sql. set it to 0 if do not need sleep").Default("").String()
+	tables         = kingpin.Flag("tables", "tables you want to process").Short('t').Default("").String()
+	databases      = kingpin.Flag("databases", "dbs you want to process").Short('d').Default("").String()
+	onlyDML        = kingpin.Flag("only-dml", "only print dml, ignore ddl").Bool()
+	sqlType        = kingpin.Flag("sql-type", "Sql type you want to process, support INSERT, UPDATE, DELETE").Default("DELETE,UPDATE,INSERT").String()
+	outputFileName = kingpin.Flag("output-file", "the file output").Default("").String()
 )
 
 func processBinlog(dsn *Dsn, args *Args) {
@@ -59,7 +60,13 @@ func processBinlog(dsn *Dsn, args *Args) {
 	fmt.Println(eStartPos, lastPos)
 	//创建文件存储数据
 	fileNameHeader := fmt.Sprintf("%s.%d", dsn.host, dsn.port)
-	tmpFile, err := createUniqueFile(fileNameHeader)
+	var tmpFile string
+	if args.outputFileName == "" {
+		tmpFile, err = createUniqueFile(fileNameHeader)
+	} else {
+		tmpFile = args.outputFileName
+	}
+
 	file, err := os.Create(tmpFile)
 	defer file.Close()
 	if err != nil {
@@ -265,7 +272,7 @@ func main() {
 	//fmt.Println(dsn_string)
 	//fmt.Printf("%+v", mysqlStruct)
 	//fmt.Println()
-	mysqlArgs, err := NewArgs(dsn_string, *startFile, *startPos, *stopFile, *stopPos, *startTime, *stopTime, *noPK, *flashBack, *stopNever, *backInterval, *onlyDML, *sqlType, *tables, *databases)
+	mysqlArgs, err := NewArgs(dsn_string, *startFile, *startPos, *stopFile, *stopPos, *startTime, *stopTime, *noPK, *flashBack, *stopNever, *backInterval, *onlyDML, *sqlType, *tables, *databases, *outputFileName)
 
 	if err != nil {
 		fmt.Println(err.Error())

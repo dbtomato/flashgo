@@ -275,6 +275,7 @@ func compareDelItems(colsNames []string, row []interface{}) []string {
 
 func compareInsertItems(colsNames []string, row []interface{}) []string {
 	var colsWheres []string
+
 	for num, _ := range colsNames {
 		if row[num] == nil {
 			row[num] = "NULL"
