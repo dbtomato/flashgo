@@ -9,6 +9,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io"
 	"os"
+	"os/exec"
 	"reflect"
 	"runtime"
 	"time"
@@ -259,7 +260,15 @@ func processBinlog(dsn *Dsn, args *Args) {
 			//fmt.Print(string(data))
 
 		}
-
+		cmdString1 := "mv -f " + tmpFile + " " + tmpFile + ".tmp"
+		cmdString2 := "mv -f " + tmpFile + ".bak " + tmpFile
+		cmdString3 := "rm -f " + tmpFile + ".tmp"
+		cmd := exec.Command("sh", "-c", cmdString1)
+		cmd2 := exec.Command("sh", "-c", cmdString2)
+		cmd3 := exec.Command("sh", "-c", cmdString3)
+		cmd.Start()
+		cmd2.Start()
+		cmd3.Start()
 		//fmt.Println("----------------------------------------------------------------------")
 	}
 }
