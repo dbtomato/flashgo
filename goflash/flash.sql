@@ -1,0 +1,2 @@
+DELETE FROM test1.t1 WHERE `id` = 2 AND `name` = "hello2" limit 1; # start 577 end 812 time 2020-04-13 22:56:57 +0000 UTC
+DELETE FROM test1.t1 WHERE `id` = 1 AND `name` = "hello" limit 1; # start 234 end 467 time 2020-04-13 22:56:51 +0000 UTC

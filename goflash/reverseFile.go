@@ -20,7 +20,7 @@ type ReadLineFromEnd struct {
 	swapBuff []byte
 }
 
-// NewReadLineFromEnd --
+// NewReadLineFromEnd
 func NewReadLineFromEnd(name string) (rd *ReadLineFromEnd, err error) {
 	f, err := os.Open(name)
 	if err != nil {

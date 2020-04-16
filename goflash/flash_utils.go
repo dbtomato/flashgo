@@ -176,7 +176,7 @@ func generateSqlPattern(e *replication.BinlogEvent, row []interface{}, flashBack
 			tmpColNames := strings.Join(colsNamesDian, ",")
 			tmpColsValues := compareInsertItems(colsNames, row)
 			tmpColValuesInsert := strings.Join(tmpColsValues, ",")
-			fmt.Println(tmpColsValues)
+			//fmt.Println(tmpColsValues)
 			sql := fmt.Sprintf("INSERT INTO `%s`.`%s`(%s) VALUES (%s);", event.Table.Schema, event.Table.Table, tmpColNames, tmpColValuesInsert)
 			//fmt.Println(sql)
 			return sql

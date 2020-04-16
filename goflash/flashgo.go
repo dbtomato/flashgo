@@ -49,6 +49,11 @@ func processBinlog(dsn *Dsn, args *Args) {
 		User:     dsn.user,
 		Password: dsn.password,
 	}
+
+	dd, _ := time.ParseDuration("10s")
+	now := time.Now()
+	time30sAfter := now.Add(dd)
+
 	db, err := GetDBConnect(dsn.String())
 	if err != nil {
 		fmt.Print(err.Error())
@@ -91,6 +96,13 @@ func processBinlog(dsn *Dsn, args *Args) {
 		typeEvent := reflect.TypeOf(binlogEvent.Event).Elem()
 		evenTime, err := time.Parse("2006-01-02 15:04:05", time.Unix(int64(binlogEvent.Header.Timestamp), 0).Format("2006-01-02 15:04:05"))
 		//每个binlog头部和末尾会有RotateEvent event，我们取头部的RotateEvent来作为标记开始一个新的文件
+
+		now := time.Now()
+		if now.Format("2006-01-02 15:04:05") == time30sAfter.Format("2006-01-02 15:04:05") {
+			fmt.Println("当前解析的位置是是", pos.Name, "---", pos.Pos)
+			time30sAfter = now.Add(dd)
+		}
+
 		if evenTime.Before(args.startTime) {
 			rotateEvent, ok := binlogEvent.Event.(*replication.RotateEvent)
 			if ok {
@@ -270,7 +282,9 @@ func processBinlog(dsn *Dsn, args *Args) {
 		cmd2.Start()
 		cmd3.Start()
 		//fmt.Println("----------------------------------------------------------------------")
+
 	}
+	fmt.Println("binlog解析完成：）")
 }
 
 func main() {
