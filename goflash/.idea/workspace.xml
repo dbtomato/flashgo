@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="44c328e3-9d18-4622-8614-e2e3456ff06f" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/goflash" beforeDir="false" afterPath="$PROJECT_DIR$/goflash" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Go File" />
+      </list>
+    </option>
+  </component>
+  <component name="GOROOT" path="/usr/local/go" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectId" id="1aIzLlBSFEwnPPPA6klHDjNMJqc" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="DefaultGoTemplateProperty" value="Go File" />
+    <property name="GO_FMT" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="go.import.settings.migrated" value="true" />
+    <property name="go.sdk.automatically.set" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  </component>
+  <component name="RunManager">
+    <configuration name="go build test.go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="goflash" />
+      <working_directory value="$PROJECT_DIR$/" />
+      <kind value="FILE" />
+      <filePath value="$PROJECT_DIR$/test/test.go" />
+      <package value="github.com/dbtomato/flashgo/goflash" />
+      <directory value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Go Build.go build test.go" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="add log" />
+    <option name="LAST_COMMIT_MESSAGE" value="add log" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="602" y="200" key="CommitChangelistDialog2" timestamp="1587003427424">
+      <screen x="0" y="23" width="2560" height="1417" />
+    </state>
+    <state x="602" y="200" key="CommitChangelistDialog2/0.23.2560.1417/-1792.171.1792.1097@0.23.2560.1417" timestamp="1587003427424" />
+    <state width="1625" height="337" key="GridCell.Tab.0.bottom" timestamp="1587003513575">
+      <screen x="0" y="23" width="2560" height="1417" />
+    </state>
+    <state width="1625" height="337" key="GridCell.Tab.0.bottom/0.23.2560.1417/-1792.171.1792.1097@0.23.2560.1417" timestamp="1587003513575" />
+    <state width="1625" height="337" key="GridCell.Tab.0.center" timestamp="1587003513574">
+      <screen x="0" y="23" width="2560" height="1417" />
+    </state>
+    <state width="1625" height="337" key="GridCell.Tab.0.center/0.23.2560.1417/-1792.171.1792.1097@0.23.2560.1417" timestamp="1587003513574" />
+    <state width="1625" height="337" key="GridCell.Tab.0.left" timestamp="1587003513573">
+      <screen x="0" y="23" width="2560" height="1417" />
+    </state>
+    <state width="1625" height="337" key="GridCell.Tab.0.left/0.23.2560.1417/-1792.171.1792.1097@0.23.2560.1417" timestamp="1587003513573" />
+    <state width="1625" height="337" key="GridCell.Tab.0.right" timestamp="1587003513575">
+      <screen x="0" y="23" width="2560" height="1417" />
+    </state>
+    <state width="1625" height="337" key="GridCell.Tab.0.right/0.23.2560.1417/-1792.171.1792.1097@0.23.2560.1417" timestamp="1587003513575" />
+    <state x="580" y="342" key="Vcs.Push.Dialog.v2" timestamp="1587003430711">
+      <screen x="0" y="23" width="2560" height="1417" />
+    </state>
+    <state x="580" y="342" key="Vcs.Push.Dialog.v2/0.23.2560.1417/-1792.171.1792.1097@0.23.2560.1417" timestamp="1587003430711" />
+  </component>
+</project>
