@@ -211,8 +211,8 @@ func generateUpdateSqlPattern(e *replication.BinlogEvent, beforeValue []interfac
 		if e.Header.EventType.String() == "UpdateRowsEventV2" {
 			tmpBeforeValues := compareWhereUpdateItems(colsNames, beforeValue)
 			tmpAfterValues := compareSetUpdateItems(colsNames, afterValue)
-			tmpWhere := strings.Join(tmpBeforeValues, " , ")
-			tmpSet := strings.Join(tmpAfterValues, " AND ")
+			tmpWhere := strings.Join(tmpBeforeValues, " AND ")
+			tmpSet := strings.Join(tmpAfterValues, " , ")
 			sql := fmt.Sprintf("UPDATE `%s`.`%s` SET %s WHERE %s LIMIT 1;", event.Table.Schema, event.Table.Table, tmpSet, tmpWhere)
 			//fmt.Println(sql)
 			return sql
